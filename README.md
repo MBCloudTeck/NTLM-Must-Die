@@ -1,5 +1,7 @@
 # NTLM-Must-Die
 
+https://techcommunity.microsoft.com/blog/microsoftsentinelblog/azure-sentinel-insecure-protocols-workbook-implementation-guide/1197564
+
 ## 🚀 Quick Start: Practical Resources
 
 **Ready to take action?** Check out the [`/resources`](./resources/) directory for practical tools and guides:
