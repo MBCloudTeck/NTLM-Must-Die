@@ -1,0 +1,382 @@
+{
+  "schema_version": "1.0",
+  "name_for_human": "NTLM Must Die Agent",
+  "name_for_model": "ntlm_security_agent",
+  "description_for_human": "Security Copilot agent for analyzing NTLM usage, detecting vulnerabilities, and providing remediation guidance to eliminate insecure NTLM authentication in enterprise environments.",
+  "description_for_model": "This agent specializes in NTLM (NT LAN Manager) security analysis and remediation. It helps security professionals identify NTLMv1 and NTLMv2 usage, detect NTLM-based attacks (relay, pass-the-hash), provide KQL queries for Microsoft Sentinel monitoring, recommend hardening strategies, and guide organizations through NTLM deprecation. The agent has expertise in Windows authentication, Active Directory security, Microsoft Defender for Identity, and Azure Sentinel/Microsoft Sentinel.",
+  "author": "NTLM-Must-Die Project",
+  "contact_email": "security@example.com",
+  "legal_info_url": "https://github.com/MBCloudTeck/NTLM-Must-Die",
+  "capabilities": [
+    {
+      "name": "analyze_ntlm_usage",
+      "description": "Analyze NTLM authentication usage patterns in an environment, distinguish between NTLMv1 and NTLMv2, identify sources and accounts using NTLM.",
+      "type": "query",
+      "examples": [
+        "Show me all NTLMv1 usage in my environment",
+        "What accounts are using NTLM authentication?",
+        "Which systems are generating the most NTLM traffic?"
+      ],
+      "kql_queries": [
+        {
+          "name": "detect_ntlmv1_usage",
+          "description": "Detect all NTLMv1 authentication attempts (critical severity)",
+          "query": "SecurityEvent | where EventID == 4624 | where LogonType in (3, 9, 10) | extend PackageName = tostring(parse_json(EventData).PackageName) | where PackageName contains 'NTLM V1' | project TimeGenerated, Computer, Account, LogonType, IpAddress, WorkstationName = tostring(parse_json(EventData).WorkstationName), TargetUserName = tostring(parse_json(EventData).TargetUserName), PackageName | summarize Count = count(), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by Account, WorkstationName | extend Severity = 'Critical' | order by Count desc"
+        },
+        {
+          "name": "detect_ntlm_authentication",
+          "description": "Monitor all NTLM authentication events including NTLMv2",
+          "query": "SecurityEvent | where EventID in (4624, 4776) | where LogonType in (3, 9, 10) | extend PackageName = tostring(parse_json(EventData).PackageName) | where PackageName contains 'NTLM' | project TimeGenerated, Computer, Account, EventID, LogonType, IpAddress, PackageName | summarize Count = count() by Computer, Account, PackageName | order by Count desc"
+        },
+        {
+          "name": "analyze_ntlm_by_account",
+          "description": "Identify which accounts are using NTLM and how frequently",
+          "query": "SecurityEvent | where EventID == 4624 | extend PackageName = tostring(parse_json(EventData).PackageName) | where PackageName contains 'NTLM' | extend TargetUserName = tostring(parse_json(EventData).TargetUserName) | summarize NTLMCount = count(), Systems = make_set(Computer), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by TargetUserName | order by NTLMCount desc"
+        },
+        {
+          "name": "analyze_ntlm_trends",
+          "description": "Track NTLM usage trends over time to measure reduction progress",
+          "query": "SecurityEvent | where EventID in (4624, 4776) | extend PackageName = tostring(parse_json(EventData).PackageName) | where PackageName contains 'NTLM' | extend NTLMVersion = case(PackageName contains 'V1', 'NTLMv1', PackageName contains 'V2', 'NTLMv2', 'NTLM-Unknown') | summarize Count = count() by bin(TimeGenerated, 1d), NTLMVersion | render timechart"
+        }
+      ]
+    },
+    {
+      "name": "detect_ntlm_attacks",
+      "description": "Detect NTLM-based attacks including relay attacks, pass-the-hash, brute force, and credential theft patterns.",
+      "type": "detection",
+      "examples": [
+        "Are there any NTLM relay attacks in my environment?",
+        "Detect pass-the-hash attempts using NTLM",
+        "Show me suspicious NTLM authentication patterns"
+      ],
+      "kql_queries": [
+        {
+          "name": "detect_ntlm_relay_attack",
+          "description": "Detect potential NTLM relay attack patterns",
+          "query": "SecurityEvent | where EventID == 4624 | where LogonType == 3 | extend PackageName = tostring(parse_json(EventData).PackageName), IpAddress = tostring(parse_json(EventData).IpAddress), TargetUserName = tostring(parse_json(EventData).TargetUserName) | where PackageName contains 'NTLM' | summarize LogonCount = count(), TargetSystems = make_set(Computer), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by IpAddress, TargetUserName | where LogonCount > 10 and array_length(TargetSystems) > 3 | extend Severity = 'High', AttackType = 'Potential NTLM Relay' | order by LogonCount desc"
+        },
+        {
+          "name": "detect_suspicious_ntlm_patterns",
+          "description": "Identify anomalous NTLM usage patterns such as high volume or unusual sources",
+          "query": "SecurityEvent | where EventID == 4624 | extend PackageName = tostring(parse_json(EventData).PackageName), WorkstationName = tostring(parse_json(EventData).WorkstationName), IpAddress = tostring(parse_json(EventData).IpAddress) | where PackageName contains 'NTLM' | summarize NTLMCount = count(), UniqueAccounts = dcount(Account), AffectedSystems = make_set(Computer) by WorkstationName, IpAddress, bin(TimeGenerated, 1h) | where NTLMCount > 50 or UniqueAccounts > 10 | extend Severity = 'Medium', AnomalyType = case(NTLMCount > 100, 'High Volume', UniqueAccounts > 10, 'Multiple Accounts', 'Suspicious') | order by NTLMCount desc"
+        }
+      ],
+      "mitre_attack_mapping": [
+        {
+          "tactic": "TA0006 - Credential Access",
+          "techniques": [
+            "T1557.001 - LLMNR/NBT-NS Poisoning and SMB Relay",
+            "T1187 - Forced Authentication"
+          ]
+        },
+        {
+          "tactic": "TA0008 - Lateral Movement",
+          "techniques": [
+            "T1021 - Remote Services"
+          ]
+        },
+        {
+          "tactic": "TA0005 - Defense Evasion",
+          "techniques": [
+            "T1550.002 - Pass the Hash"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "provide_remediation_guidance",
+      "description": "Provide step-by-step remediation guidance for eliminating NTLM usage, hardening configurations, and implementing Kerberos authentication.",
+      "type": "guidance",
+      "examples": [
+        "How do I disable NTLMv1?",
+        "What are the steps to eliminate NTLM in my environment?",
+        "How can I configure Kerberos instead of NTLM?"
+      ],
+      "guidance_categories": [
+        {
+          "category": "Immediate Actions (NTLMv1 Elimination)",
+          "steps": [
+            "1. Audit NTLMv1 usage using Event ID 4624 with PackageName 'NTLM V1'",
+            "2. Identify all sources generating NTLMv1 traffic (legacy systems, applications, devices)",
+            "3. Apply Group Policy to disable NTLMv1: Network security: LAN Manager authentication level = 'Send NTLMv2 response only. Refuse LM & NTLM'",
+            "4. Enable Windows Credential Guard on Windows 10/11 Enterprise (automatically disables NTLMv1)",
+            "5. Monitor for broken applications and remediate",
+            "6. Verify NTLMv1 is completely eliminated using continuous monitoring"
+          ],
+          "group_policy_settings": [
+            "Computer Configuration > Windows Settings > Security Settings > Local Policies > Security Options",
+            "Network security: LAN Manager authentication level = Send NTLMv2 response only. Refuse LM & NTLM",
+            "Network security: Minimum session security for NTLM SSP = Require NTLMv2 session security, Require 128-bit encryption"
+          ]
+        },
+        {
+          "category": "Progressive NTLMv2 Reduction",
+          "steps": [
+            "1. Map all applications and services using NTLM authentication",
+            "2. Identify missing Service Principal Names (SPNs) causing Kerberos fallback to NTLM",
+            "3. Configure SPNs for service accounts (setspn.exe)",
+            "4. Enable NTLM auditing to track usage: Computer Configuration > Policies > Windows Settings > Security Settings > Local Policies > Security Options > Network Security: Restrict NTLM: Audit NTLM authentication in this domain",
+            "5. Work with application teams to reconfigure for Kerberos",
+            "6. Gradually restrict NTLM using Group Policy",
+            "7. Monitor event logs (8001-8004) for NTLM operational events"
+          ]
+        },
+        {
+          "category": "Defense Measures",
+          "steps": [
+            "1. Enable SMB signing to prevent NTLM relay attacks",
+            "2. Enable LDAP signing and channel binding on domain controllers",
+            "3. Enable Extended Protection for Authentication (EPA)",
+            "4. Use Windows Credential Guard on endpoints",
+            "5. Add privileged accounts to Protected Users security group (blocks NTLM, requires Kerberos)",
+            "6. Implement LAPS (Local Administrator Password Solution) for unique local admin passwords",
+            "7. Enable Microsoft Defender for Identity for NTLM attack detection",
+            "8. Configure Microsoft Sentinel with NTLM detection rules"
+          ]
+        },
+        {
+          "category": "Monitoring and Detection",
+          "steps": [
+            "1. Configure Windows Event Forwarding for centralized log collection",
+            "2. Enable Security Event logging on all domain controllers and member servers",
+            "3. Configure Microsoft Sentinel data connectors for Windows Security Events",
+            "4. Deploy Insecure Protocols Workbook in Microsoft Sentinel",
+            "5. Create alert rules for NTLMv1 usage (critical severity)",
+            "6. Create alert rules for NTLM relay attack patterns (high severity)",
+            "7. Create alert rules for privileged account NTLM usage",
+            "8. Review NTLM metrics weekly and track reduction progress"
+          ]
+        }
+      ],
+      "powershell_scripts": [
+        {
+          "name": "Enable-NTLMAuditing.ps1",
+          "description": "Enable NTLM auditing via Group Policy for tracking usage",
+          "path": "resources/PowerShell/Enable-NTLMAuditing.ps1"
+        },
+        {
+          "name": "Disable-NTLMv1.ps1",
+          "description": "Disable NTLMv1 using Group Policy and registry settings",
+          "path": "resources/PowerShell/Disable-NTLMv1.ps1"
+        },
+        {
+          "name": "Audit-NTLMUsage.ps1",
+          "description": "Comprehensive audit script to discover NTLM usage across domain",
+          "path": "resources/PowerShell/Audit-NTLMUsage.ps1"
+        }
+      ]
+    },
+    {
+      "name": "generate_ntlm_reports",
+      "description": "Generate comprehensive reports on NTLM usage, trends, risk assessment, and remediation progress.",
+      "type": "reporting",
+      "examples": [
+        "Generate an NTLM usage summary report",
+        "Show me a risk assessment for NTLM in my environment",
+        "Create a legacy protocol usage report"
+      ],
+      "kql_queries": [
+        {
+          "name": "report_ntlm_summary",
+          "description": "Executive summary of NTLM usage with risk classification",
+          "query": "SecurityEvent | where EventID in (4624, 4776) | extend PackageName = tostring(parse_json(EventData).PackageName) | where PackageName contains 'NTLM' | extend NTLMVersion = case(PackageName contains 'V1', 'NTLMv1', PackageName contains 'V2', 'NTLMv2', 'NTLM-Unknown'), TargetUserName = tostring(parse_json(EventData).TargetUserName) | summarize TotalNTLMEvents = count(), NTLMv1Events = countif(NTLMVersion == 'NTLMv1'), NTLMv2Events = countif(NTLMVersion == 'NTLMv2'), UniqueAccounts = dcount(TargetUserName), UniqueSystems = dcount(Computer), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) | extend RiskLevel = case(NTLMv1Events > 0, 'Critical - NTLMv1 Detected', NTLMv2Events > 1000, 'High - Heavy NTLM Usage', NTLMv2Events > 100, 'Medium - Moderate NTLM Usage', 'Low - Minimal NTLM')"
+        },
+        {
+          "name": "report_legacy_protocol_usage",
+          "description": "Comprehensive report on all legacy authentication protocols",
+          "query": "SecurityEvent | where EventID == 4624 | extend PackageName = tostring(parse_json(EventData).PackageName) | where PackageName in ('NTLM V1', 'NTLM V2', 'NTLM') or PackageName contains 'NTLM' | summarize Count = count(), UniqueUsers = dcount(Account), UniqueSystems = dcount(Computer), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by PackageName | extend Protocol = PackageName, RiskLevel = case(PackageName contains 'V1', 'Critical', PackageName contains 'NTLM', 'High', 'Medium') | order by Count desc"
+        }
+      ],
+      "report_types": [
+        {
+          "type": "Executive Summary",
+          "metrics": [
+            "Total NTLM authentication events",
+            "NTLMv1 vs NTLMv2 breakdown",
+            "Number of affected systems",
+            "Number of accounts using NTLM",
+            "Risk level assessment",
+            "Trend comparison (week-over-week)"
+          ]
+        },
+        {
+          "type": "Technical Detail Report",
+          "metrics": [
+            "Top 10 sources of NTLM traffic",
+            "Top 10 accounts using NTLM",
+            "NTLM usage by logon type",
+            "Geographic distribution of NTLM sources (if available)",
+            "Time-based patterns (business hours vs off-hours)",
+            "Service account NTLM usage"
+          ]
+        },
+        {
+          "type": "Remediation Progress Report",
+          "metrics": [
+            "NTLM event count reduction over time",
+            "Systems migrated to Kerberos",
+            "Applications remediated",
+            "NTLMv1 elimination status",
+            "Remaining legacy systems count",
+            "Estimated completion timeline"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "assess_ntlm_risk",
+      "description": "Assess the security risk posed by NTLM usage in the environment, including vulnerability scoring and attack surface analysis.",
+      "type": "risk_assessment",
+      "examples": [
+        "What is my NTLM risk score?",
+        "Assess the security risk of NTLM in my environment",
+        "What vulnerabilities does NTLM expose us to?"
+      ],
+      "risk_factors": [
+        {
+          "factor": "NTLMv1 Usage",
+          "severity": "Critical",
+          "description": "NTLMv1 uses DES encryption and MD4 hashing, both cryptographically broken. Easily cracked offline and vulnerable to pass-the-hash.",
+          "cvss_score": 9.8,
+          "mitigation": "Disable NTLMv1 immediately via Group Policy"
+        },
+        {
+          "factor": "NTLMv2 Without Signing",
+          "severity": "High",
+          "description": "NTLMv2 without SMB signing is vulnerable to relay attacks where attacker intercepts and relays authentication.",
+          "cvss_score": 8.1,
+          "mitigation": "Enable SMB signing, LDAP signing, and EPA (Extended Protection for Authentication)"
+        },
+        {
+          "factor": "Privileged Accounts Using NTLM",
+          "severity": "High",
+          "description": "Domain admins and privileged accounts using NTLM expose high-value credentials to theft and replay.",
+          "cvss_score": 8.5,
+          "mitigation": "Add privileged accounts to Protected Users group (blocks NTLM), require Kerberos only"
+        },
+        {
+          "factor": "Service Accounts Using NTLM",
+          "severity": "Medium",
+          "description": "Service accounts often have elevated permissions and use stored credentials, making them targets for credential theft.",
+          "cvss_score": 7.2,
+          "mitigation": "Configure SPNs for service accounts, use Group Managed Service Accounts (gMSA)"
+        },
+        {
+          "factor": "High Volume NTLM Traffic",
+          "severity": "Medium",
+          "description": "Large amount of NTLM traffic increases attack surface and indicates widespread legacy dependencies.",
+          "cvss_score": 6.5,
+          "mitigation": "Systematically migrate applications to Kerberos, audit and remediate top sources"
+        }
+      ],
+      "vulnerability_mapping": [
+        {
+          "cve": "N/A (Design Weakness)",
+          "description": "NTLM protocol lacks mutual authentication, enabling relay attacks",
+          "affected": "All systems using NTLM",
+          "references": [
+            "https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/network-security-lan-manager-authentication-level",
+            "https://techcommunity.microsoft.com/blog/microsoftsentinelblog/azure-sentinel-insecure-protocols-workbook-implementation-guide/1197564"
+          ]
+        },
+        {
+          "cve": "N/A (Cryptographic Weakness)",
+          "description": "NTLMv1 uses deprecated DES and MD4 cryptography, trivially crackable",
+          "affected": "Systems allowing NTLMv1",
+          "references": [
+            "https://docs.microsoft.com/en-us/troubleshoot/windows-server/windows-security/ntlmv1-support-deprecation"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "provide_detection_rules",
+      "description": "Provide SIEM detection rules, alert configurations, and security monitoring content for NTLM threats.",
+      "type": "detection_content",
+      "examples": [
+        "Give me Sentinel detection rules for NTLM attacks",
+        "How do I configure alerts for NTLMv1?",
+        "What SIEM rules should I deploy for NTLM monitoring?"
+      ],
+      "detection_rules": [
+        {
+          "platform": "Microsoft Sentinel",
+          "rule_name": "NTLMv1 Authentication Detected - Critical",
+          "severity": "High",
+          "description": "Alerts on any NTLMv1 authentication attempt. NTLMv1 should be disabled.",
+          "file_reference": "resources/DetectionRules/sentinel-ntlmv1-detection.yaml",
+          "event_ids": ["4624"],
+          "false_positive_rate": "Low"
+        },
+        {
+          "platform": "Microsoft Sentinel",
+          "rule_name": "NTLM Relay Attack Pattern",
+          "severity": "High",
+          "description": "Detects potential NTLM relay attack based on multiple logons from same source to multiple targets.",
+          "file_reference": "resources/DetectionRules/sentinel-ntlm-relay-attack.yaml",
+          "event_ids": ["4624", "4776"],
+          "false_positive_rate": "Medium"
+        },
+        {
+          "platform": "Microsoft Sentinel",
+          "rule_name": "Privileged Account NTLM Usage",
+          "severity": "High",
+          "description": "Alerts when privileged or administrative accounts authenticate using NTLM.",
+          "file_reference": "resources/DetectionRules/sentinel-privileged-ntlm.yaml",
+          "event_ids": ["4624", "4776"],
+          "false_positive_rate": "Low"
+        },
+        {
+          "platform": "Microsoft Sentinel",
+          "rule_name": "Anomalous NTLM Volume",
+          "severity": "Medium",
+          "description": "Detects unusual spikes in NTLM authentication volume that may indicate brute force or scanning.",
+          "file_reference": "resources/DetectionRules/sentinel-anomalous-ntlm.yaml",
+          "event_ids": ["4624", "4625", "4776"],
+          "false_positive_rate": "Medium"
+        }
+      ],
+      "required_data_sources": [
+        "Windows Security Event Logs (Event IDs: 4624, 4625, 4776, 8001-8004)",
+        "Microsoft Defender for Identity",
+        "Microsoft Defender for Endpoint",
+        "Azure AD Sign-In Logs (for hybrid environments)"
+      ]
+    }
+  ],
+  "resources": {
+    "kql_queries_path": "resources/KQL/",
+    "powershell_scripts_path": "resources/PowerShell/",
+    "detection_rules_path": "resources/DetectionRules/",
+    "checklists_path": "resources/Checklists/",
+    "group_policies_path": "resources/Policies/",
+    "azure_arc_guides_path": "resources/AzureArc/"
+  },
+  "supported_microsoft_products": [
+    "Microsoft Sentinel",
+    "Microsoft Defender for Identity",
+    "Microsoft Defender for Endpoint",
+    "Azure Monitor",
+    "Azure Arc",
+    "Active Directory",
+    "Windows Server",
+    "Windows 10/11"
+  ],
+  "integration": {
+    "sentinel_workbook": {
+      "name": "Insecure Protocols Workbook",
+      "description": "Microsoft Sentinel workbook for visualizing NTLM and other legacy protocol usage",
+      "url": "https://techcommunity.microsoft.com/blog/microsoftsentinelblog/azure-sentinel-insecure-protocols-workbook-implementation-guide/1197564"
+    },
+    "defender_for_identity": {
+      "detections": [
+        "NTLM Relay Attack",
+        "Pass-the-Hash",
+        "Service Account Discovery",
+        "Suspicious NTLM Authentication"
+      ]
+    }
+  },
+  "version": "1.0.0",
+  "last_updated": "2026-01-26"
+}
