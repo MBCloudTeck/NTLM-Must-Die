@@ -1,0 +1,117 @@
+id: ntlmv1-authentication-detected
+name: NTLMv1 Authentication Detected - Critical Security Alert
+description: |
+  Detects any usage of NTLMv1 authentication protocol, which is highly insecure 
+  and should be disabled. NTLMv1 uses weak cryptography (DES, MD4) and is vulnerable 
+  to various attacks including pass-the-hash and credential theft.
+  
+  This rule generates a HIGH severity alert for any NTLMv1 authentication attempt.
+  
+  IMMEDIATE ACTION REQUIRED when this alert fires.
+
+severity: High
+requiredDataConnectors:
+  - connectorId: SecurityEvents
+    dataTypes:
+      - SecurityEvent
+  - connectorId: WindowsSecurityEvents
+    dataTypes:
+      - SecurityEvent
+
+queryFrequency: 5m
+queryPeriod: 5m
+triggerOperator: gt
+triggerThreshold: 0
+
+tactics:
+  - CredentialAccess
+  - LateralMovement
+
+relevantTechniques:
+  - T1187  # Forced Authentication
+  - T1557  # Man-in-the-Middle
+
+query: |
+  SecurityEvent
+  | where TimeGenerated > ago(5m)
+  | where EventID == 4624  // Successful logon event
+  | where LogonType in (3, 9, 10)  // Network, NewCredentials, RemoteInteractive
+  | extend PackageName = tostring(parse_json(EventData).PackageName)
+  | where PackageName == "NTLM V1" or PackageName contains "NTLM V1"
+  | extend 
+      AccountName = tostring(parse_json(EventData).TargetUserName),
+      AccountDomain = tostring(parse_json(EventData).TargetDomainName),
+      SourceSystem = tostring(parse_json(EventData).WorkstationName),
+      SourceIP = IpAddress,
+      TargetSystem = Computer,
+      LogonTypeName = case(
+          LogonType == 3, "Network",
+          LogonType == 9, "NewCredentials", 
+          LogonType == 10, "RemoteInteractive",
+          "Other"
+      )
+  | project 
+      TimeGenerated,
+      AccountName,
+      AccountDomain,
+      SourceSystem,
+      SourceIP,
+      TargetSystem,
+      LogonTypeName,
+      EventID,
+      Activity
+  | extend 
+      AlertName = "NTLMv1 Authentication Detected",
+      AlertSeverity = "High",
+      AlertDescription = strcat("NTLMv1 authentication detected from ", SourceSystem, " (", SourceIP, ") for account ", AccountName, " to system ", TargetSystem),
+      RemediationSteps = "1. Immediately investigate the source system. 2. Verify if system requires NTLMv1. 3. Disable NTLMv1 if possible. 4. Isolate system if it's compromised. 5. Check for signs of credential theft or lateral movement."
+
+entityMappings:
+  - entityType: Account
+    fieldMappings:
+      - identifier: Name
+        columnName: AccountName
+      - identifier: NTDomain
+        columnName: AccountDomain
+  - entityType: Host
+    fieldMappings:
+      - identifier: HostName
+        columnName: SourceSystem
+  - entityType: Host
+    fieldMappings:
+      - identifier: HostName
+        columnName: TargetSystem
+  - entityType: IP
+    fieldMappings:
+      - identifier: Address
+        columnName: SourceIP
+
+alertDetailsOverride:
+  alertDisplayNameFormat: "NTLMv1 Authentication: {{AccountName}} from {{SourceSystem}}"
+  alertDescriptionFormat: "Critical: NTLMv1 detected from {{SourceSystem}} ({{SourceIP}}) authenticating as {{AccountName}} to {{TargetSystem}}"
+  alertSeverityColumnName: AlertSeverity
+  alertDynamicProperties:
+    - alertProperty: RemediationSteps
+      value: RemediationSteps
+
+incidentConfiguration:
+  createIncident: true
+  groupingConfiguration:
+    enabled: true
+    reopenClosedIncident: true
+    lookbackDuration: 1h
+    matchingMethod: AllEntities
+    groupByEntities:
+      - Account
+      - Host
+    groupByAlertDetails: []
+    groupByCustomDetails: []
+
+customDetails:
+  SourceSystem: SourceSystem
+  SourceIP: SourceIP
+  TargetSystem: TargetSystem
+  LogonType: LogonTypeName
+
+version: 1.0.0
+kind: Scheduled

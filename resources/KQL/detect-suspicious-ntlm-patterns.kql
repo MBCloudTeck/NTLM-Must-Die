@@ -1,0 +1,50 @@
+// Detect Suspicious NTLM Patterns
+// This query identifies potentially malicious NTLM usage patterns including:
+// - NTLM relay attacks (rapid authentications from same source)
+// - Unusual service accounts using NTLM
+// - NTLM authentications to non-domain systems
+
+let TimeWindow = 5m;
+let SuspiciousThreshold = 10;
+SecurityEvent
+| where TimeGenerated > ago(24h)
+| where EventID == 4624
+| extend PackageName = tostring(parse_json(EventData).PackageName)
+| where PackageName contains "NTLM"
+| extend 
+    SourceIP = IpAddress,
+    TargetSystem = Computer,
+    Account = TargetUserName
+| summarize 
+    AuthCount = count(),
+    UniqueSystems = dcount(TargetSystem),
+    UniqueAccounts = dcount(Account),
+    Systems = make_set(TargetSystem),
+    FirstAuth = min(TimeGenerated),
+    LastAuth = max(TimeGenerated)
+    by SourceIP, bin(TimeGenerated, TimeWindow)
+| where AuthCount > SuspiciousThreshold or UniqueSystems > 5
+| extend 
+    Severity = case(
+        AuthCount > 50, "Critical",
+        AuthCount > 20, "High",
+        UniqueSystems > 10, "High",
+        "Medium"
+    )
+| extend SuspiciousIndicator = case(
+    AuthCount > 50, "Possible NTLM Relay Attack - Rapid authentications",
+    UniqueSystems > 10, "Lateral Movement Pattern - Multiple targets",
+    "Unusual NTLM Activity"
+)
+| project 
+    TimeGenerated,
+    SourceIP,
+    AuthCount,
+    UniqueSystems,
+    UniqueAccounts,
+    Severity,
+    SuspiciousIndicator,
+    FirstAuth,
+    LastAuth,
+    Systems
+| order by AuthCount desc
