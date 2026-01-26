@@ -367,7 +367,7 @@ This project is provided as-is for educational and security improvement purposes
 
 ## Version History
 
-- **v1.0.0** (2026-01-26): Initial release
+- **v1.0.0** (Initial Release)
   - Core NTLM analysis capabilities
   - Attack detection rules
   - Remediation guidance

@@ -107,7 +107,7 @@ wget https://raw.githubusercontent.com/MBCloudTeck/NTLM-Must-Die/main/security-c
 
 ### Step 4: Install the Agent in Security Copilot
 
-> **Note**: As of January 2026, custom agent installation in Security Copilot is done through the Security Copilot portal. The exact steps may vary based on your Security Copilot version.
+> **Note**: Custom agent installation in Security Copilot is done through the Security Copilot portal. The exact steps may vary based on your Security Copilot version.
 
 #### General Process:
 
