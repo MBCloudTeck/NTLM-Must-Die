@@ -15,6 +15,8 @@ https://techcommunity.microsoft.com/blog/microsoftsentinelblog/azure-sentinel-in
 
 �� **Start here**: [Resources Overview](./resources/README.md)
 
+Original Author - and full credit to https://www.linkedin.com/in/david-alonso-dominguez/ - Great blog post - Supercharged with GitHub Copilot. 
+
 ---
 
 ## Overview
