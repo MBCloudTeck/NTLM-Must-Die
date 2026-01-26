@@ -1,0 +1,29 @@
+// Detect NTLMv1 Authentication Attempts
+// This query identifies all NTLMv1 authentication attempts in your environment
+// NTLMv1 is highly insecure and should be disabled
+
+SecurityEvent
+| where EventID == 4624  // Successful logon
+| where LogonType in (3, 9, 10)  // Network, NewCredentials, RemoteInteractive
+| extend PackageName = tostring(parse_json(EventData).PackageName)
+| where PackageName contains "NTLM V1"
+| project 
+    TimeGenerated,
+    Computer,
+    Account,
+    LogonType,
+    IpAddress,
+    WorkstationName = tostring(parse_json(EventData).WorkstationName),
+    TargetUserName = tostring(parse_json(EventData).TargetUserName),
+    TargetDomainName = tostring(parse_json(EventData).TargetDomainName),
+    PackageName
+| summarize 
+    Count = count(),
+    FirstSeen = min(TimeGenerated),
+    LastSeen = max(TimeGenerated),
+    AffectedSystems = make_set(Computer),
+    SourceIPs = make_set(IpAddress)
+    by Account, WorkstationName, TargetUserName
+| extend Severity = "Critical"
+| extend Recommendation = "Disable NTLMv1 immediately - this protocol uses weak cryptography and is easily exploited"
+| order by Count desc

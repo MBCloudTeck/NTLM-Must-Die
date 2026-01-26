@@ -1,0 +1,143 @@
+id: ntlm-relay-attack-detection
+name: Potential NTLM Relay Attack Detected
+description: |
+  Detects potential NTLM relay attacks by identifying rapid NTLM authentication 
+  attempts from a single source to multiple targets within a short time window.
+  
+  NTLM relay attacks involve an attacker intercepting and relaying NTLM authentication
+  attempts to gain unauthorized access to systems. This pattern detection identifies:
+  - High volume of NTLM authentications from single source
+  - Authentications to multiple different target systems
+  - Short time window (indicative of automated attack)
+  
+  Indicators:
+  - More than 20 NTLM authentications in 5 minutes from single IP
+  - Targeting multiple unique systems (>5)
+  - Using NTLM protocol (v1 or v2)
+
+severity: High
+requiredDataConnectors:
+  - connectorId: SecurityEvents
+    dataTypes:
+      - SecurityEvent
+
+queryFrequency: 5m
+queryPeriod: 5m
+triggerOperator: gt
+triggerThreshold: 0
+
+tactics:
+  - CredentialAccess
+  - LateralMovement
+
+relevantTechniques:
+  - T1557.001  # LLMNR/NBT-NS Poisoning and SMB Relay
+  - T1021      # Remote Services
+
+query: |
+  let threshold = 20;
+  let uniqueTargetThreshold = 5;
+  let timeframe = 5m;
+  SecurityEvent
+  | where TimeGenerated > ago(timeframe)
+  | where EventID == 4624
+  | extend PackageName = tostring(parse_json(EventData).PackageName)
+  | where PackageName contains "NTLM"
+  | extend 
+      SourceIP = IpAddress,
+      TargetSystem = Computer,
+      AccountName = tostring(parse_json(EventData).TargetUserName),
+      SourceSystem = tostring(parse_json(EventData).WorkstationName),
+      NTLMVersion = case(
+          PackageName contains "V1", "NTLMv1",
+          PackageName contains "V2", "NTLMv2",
+          "NTLM"
+      )
+  | where isnotempty(SourceIP)
+  | summarize 
+      AuthCount = count(),
+      UniqueTargets = dcount(TargetSystem),
+      UniqueAccounts = dcount(AccountName),
+      TargetSystems = make_set(TargetSystem, 100),
+      Accounts = make_set(AccountName, 100),
+      NTLMVersions = make_set(NTLMVersion),
+      FirstAuth = min(TimeGenerated),
+      LastAuth = max(TimeGenerated)
+      by SourceIP, SourceSystem
+  | where AuthCount > threshold and UniqueTargets >= uniqueTargetThreshold
+  | extend 
+      DurationSeconds = datetime_diff('second', LastAuth, FirstAuth),
+      AuthsPerMinute = AuthCount / (datetime_diff('second', LastAuth, FirstAuth) / 60.0)
+  | extend 
+      Severity = case(
+          AuthCount > 100, "Critical",
+          AuthCount > 50, "High",
+          UniqueTargets > 10, "High",
+          "Medium"
+      ),
+      ConfidenceLevel = case(
+          AuthCount > 50 and UniqueTargets > 10, "High",
+          AuthCount > 30 and UniqueTargets > 5, "Medium",
+          "Low"
+      )
+  | project 
+      TimeGenerated = FirstAuth,
+      SourceIP,
+      SourceSystem,
+      AuthCount,
+      UniqueTargets,
+      UniqueAccounts,
+      AuthsPerMinute,
+      DurationSeconds,
+      TargetSystems,
+      Accounts,
+      NTLMVersions,
+      Severity,
+      ConfidenceLevel
+  | extend 
+      AlertName = "Potential NTLM Relay Attack",
+      AlertDescription = strcat("Detected ", AuthCount, " NTLM authentications from ", SourceIP, " (", SourceSystem, ") to ", UniqueTargets, " unique targets in ", DurationSeconds, " seconds"),
+      RemediationSteps = "1. Immediately investigate source IP and system. 2. Check for malicious activity or compromise. 3. Review authentication logs for unauthorized access. 4. Consider blocking source IP if malicious. 5. Enable SMB signing and LDAP signing to prevent relay attacks. 6. Enable EPA (Extended Protection for Authentication)."
+
+entityMappings:
+  - entityType: IP
+    fieldMappings:
+      - identifier: Address
+        columnName: SourceIP
+  - entityType: Host
+    fieldMappings:
+      - identifier: HostName
+        columnName: SourceSystem
+
+alertDetailsOverride:
+  alertDisplayNameFormat: "NTLM Relay Attack: {{AuthCount}} authentications from {{SourceIP}}"
+  alertDescriptionFormat: "Potential NTLM relay attack: {{AuthCount}} rapid authentications from {{SourceIP}} to {{UniqueTargets}} systems"
+  alertSeverityColumnName: Severity
+  alertDynamicProperties:
+    - alertProperty: ConfidenceLevel
+      value: ConfidenceLevel
+    - alertProperty: RemediationSteps
+      value: RemediationSteps
+
+incidentConfiguration:
+  createIncident: true
+  groupingConfiguration:
+    enabled: true
+    reopenClosedIncident: true
+    lookbackDuration: 1h
+    matchingMethod: Selected
+    groupByEntities:
+      - IP
+    groupByAlertDetails: []
+    groupByCustomDetails: []
+
+customDetails:
+  SourceIP: SourceIP
+  SourceSystem: SourceSystem
+  AuthenticationCount: AuthCount
+  TargetCount: UniqueTargets
+  AuthsPerMinute: AuthsPerMinute
+  ConfidenceLevel: ConfidenceLevel
+
+version: 1.0.1
+kind: Scheduled

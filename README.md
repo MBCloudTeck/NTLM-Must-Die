@@ -1,3 +1,22 @@
+# NTLM-Must-Die
+
+## 🚀 Quick Start: Practical Resources
+
+**Ready to take action?** Check out the [`/resources`](./resources/) directory for practical tools and guides:
+
+- **[KQL Queries](./resources/KQL/)** - Detection and monitoring queries for Microsoft Sentinel
+- **[PowerShell Scripts](./resources/PowerShell/)** - Automation scripts for auditing and hardening
+- **[Azure Arc Guides](./resources/AzureArc/)** - Setup guides for hybrid environment monitoring
+- **[Checklists](./resources/Checklists/)** - Phase-by-phase implementation checklists
+- **[Detection Rules](./resources/DetectionRules/)** - SIEM rules for NTLM attack detection
+- **[Group Policies](./resources/Policies/)** - GPO templates for NTLM hardening
+
+�� **Start here**: [Resources Overview](./resources/README.md)
+
+---
+
+## Overview
+
 NTLM has long been a cornerstone of Windows authentication—but in today’s threat landscape, it’s become a liability. With its outdated cryptographic design and lack of mutual authentication, NTLM (especially NTLMv1) is a prime target for credential theft, relay attacks, and pass-the-hash techniques. Even NTLMv2, while more secure, remains vulnerable if not properly hardened.
 
 In this article, we explore how we conducted a full NTLM usage assessment across the enterprise, identified active attack patterns, and implemented a hardening strategy using Microsoft Sentinel and MCP Server. From auditing and detection to risk mitigation and roadmap planning, this summary outlines the key findings, defensive measures, and actionable steps to phase out NTLM and strengthen identity security. 
