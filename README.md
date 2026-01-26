@@ -2,6 +2,19 @@
 
 https://techcommunity.microsoft.com/blog/microsoftsentinelblog/azure-sentinel-insecure-protocols-workbook-implementation-guide/1197564
 
+## 🤖 NEW: Security Copilot Agent
+
+**Accelerate NTLM elimination with AI!** The NTLM Must Die Security Copilot Agent brings AI-powered NTLM analysis and remediation guidance directly to Microsoft Security Copilot.
+
+- **[Security Copilot Agent](./security-copilot-agent/)** - AI-powered NTLM analysis and remediation
+  - Analyze NTLM usage with natural language queries
+  - Detect NTLM-based attacks in real-time
+  - Get step-by-step remediation guidance
+  - Generate comprehensive reports
+  - Deploy monitoring and detection rules
+
+📖 **Get started**: [Installation Guide](./security-copilot-agent/INSTALLATION.md) | [Quick Start](./security-copilot-agent/QUICKSTART.md)
+
 ## 🚀 Quick Start: Practical Resources
 
 **Ready to take action?** Check out the [`/resources`](./resources/) directory for practical tools and guides:
