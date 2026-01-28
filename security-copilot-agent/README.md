@@ -260,7 +260,7 @@ Would you like me to generate the Group Policy template?
 
 ## KQL Query Reference
 
-All KQL queries are available in the `/resources/KQL/` directory:
+All KQL queries are available in the `/NTLM resources/KQL/` directory:
 
 | Query | Purpose | Severity |
 |-------|---------|----------|
@@ -275,7 +275,7 @@ All KQL queries are available in the `/resources/KQL/` directory:
 
 ## PowerShell Script Reference
 
-Automation scripts are available in `/resources/PowerShell/`:
+Automation scripts are available in `/NTLM resources/PowerShell/`:
 
 | Script | Purpose |
 |--------|---------|
@@ -285,7 +285,7 @@ Automation scripts are available in `/resources/PowerShell/`:
 
 ## Detection Rules
 
-SIEM detection rules are available in `/resources/DetectionRules/`:
+SIEM detection rules are available in `/NTLM resources/DetectionRules/`:
 
 - **Microsoft Sentinel Rules** (YAML format)
   - `sentinel-ntlmv1-detection.yaml`
@@ -348,7 +348,7 @@ This agent addresses the following MITRE ATT&CK tactics and techniques:
 
 ### Resources
 - **Repository**: https://github.com/MBCloudTeck/NTLM-Must-Die
-- **Documentation**: See `/resources/` directory for guides and checklists
+- **Documentation**: See `/NTLM resources/` directory for guides and checklists
 - **Microsoft Guidance**: https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/network-security-lan-manager-authentication-level
 
 ### Contributing
