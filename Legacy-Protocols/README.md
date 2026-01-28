@@ -142,25 +142,25 @@ Step-by-step guides for eliminating legacy protocols:
 This Legacy Protocols section integrates with other repository resources:
 
 ### KQL Queries
-Located in [`/resources/KQL/`](../resources/KQL/):
+Located in [`/NTLM resources/KQL/`](../NTLM%20resources/KQL/):
 - Detection queries for all legacy protocols
 - Trend analysis and reporting
 - Attack pattern detection
 
 ### PowerShell Scripts
-Located in [`/resources/PowerShell/`](../resources/PowerShell/):
+Located in [`/NTLM resources/PowerShell/`](../NTLM%20resources/PowerShell/):
 - Automated detection scripts
 - Configuration audit tools
 - Migration helper scripts
 
 ### Detection Rules
-Located in [`/resources/DetectionRules/`](../resources/DetectionRules/):
+Located in [`/NTLM resources/DetectionRules/`](../NTLM%20resources/DetectionRules/):
 - SIEM analytics rules
 - Alert configurations
 - Incident response playbooks
 
 ### Policies
-Located in [`/resources/Policies/`](../resources/Policies/):
+Located in [`/NTLM resources/Policies/`](../NTLM%20resources/Policies/):
 - Group Policy templates
 - Conditional Access policies
 - Network security policies
@@ -288,7 +288,7 @@ Contributions are welcome! Please see the main repository guidelines for contrib
 - [Detection](./Detection-Monitoring/) | [Remediation](./Remediation/)
 
 **By Resource:**
-- [KQL Queries](../resources/KQL/) | [PowerShell Scripts](../resources/PowerShell/) | [Policies](../resources/Policies/)
+- [KQL Queries](../NTLM%20resources/KQL/) | [PowerShell Scripts](../NTLM%20resources/PowerShell/) | [Policies](../NTLM%20resources/Policies/)
 
 ---
 

@@ -375,9 +375,9 @@ Now that you're up and running:
 
 - **Full Documentation**: See `README.md`
 - **Installation Guide**: See `INSTALLATION.md`
-- **KQL Queries**: `/resources/KQL/` directory
-- **PowerShell Scripts**: `/resources/PowerShell/` directory
-- **Detection Rules**: `/resources/DetectionRules/` directory
+- **KQL Queries**: `/NTLM resources/KQL/` directory
+- **PowerShell Scripts**: `/NTLM resources/PowerShell/` directory
+- **Detection Rules**: `/NTLM resources/DetectionRules/` directory
 
 ## Feedback
 

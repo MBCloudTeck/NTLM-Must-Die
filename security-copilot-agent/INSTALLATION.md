@@ -54,7 +54,7 @@ Alternatively, use the provided automation script:
 
 ```powershell
 # Download and run the NTLM auditing script
-cd /path/to/NTLM-Must-Die/resources/PowerShell
+cd /path/to/NTLM-Must-Die/NTLM resources/PowerShell
 .\Enable-NTLMAuditing.ps1
 ```
 
@@ -171,7 +171,7 @@ Deploy the included detection rules to Microsoft Sentinel:
 2. **Import NTLMv1 Detection Rule**
    ```bash
    # Upload the YAML file
-   cd /path/to/NTLM-Must-Die/resources/DetectionRules
+   cd /path/to/NTLM-Must-Die/NTLM resources/DetectionRules
    # Import sentinel-ntlmv1-detection.yaml via Sentinel portal
    ```
 

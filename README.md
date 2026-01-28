@@ -17,16 +17,16 @@ https://techcommunity.microsoft.com/blog/microsoftsentinelblog/azure-sentinel-in
 
 ## 🚀 Quick Start: Practical Resources
 
-**Ready to take action?** Check out the [`/resources`](./resources/) directory for practical tools and guides:
+**Ready to take action?** Check out the [`/NTLM resources`](./NTLM%20resources/) directory for practical tools and guides:
 
-- **[KQL Queries](./resources/KQL/)** - Detection and monitoring queries for Microsoft Sentinel
-- **[PowerShell Scripts](./resources/PowerShell/)** - Automation scripts for auditing and hardening
-- **[Azure Arc Guides](./resources/AzureArc/)** - Setup guides for hybrid environment monitoring
-- **[Checklists](./resources/Checklists/)** - Phase-by-phase implementation checklists
-- **[Detection Rules](./resources/DetectionRules/)** - SIEM rules for NTLM attack detection
-- **[Group Policies](./resources/Policies/)** - GPO templates for NTLM hardening
+- **[KQL Queries](./NTLM%20resources/KQL/)** - Detection and monitoring queries for Microsoft Sentinel
+- **[PowerShell Scripts](./NTLM%20resources/PowerShell/)** - Automation scripts for auditing and hardening
+- **[Azure Arc Guides](./NTLM%20resources/AzureArc/)** - Setup guides for hybrid environment monitoring
+- **[Checklists](./NTLM%20resources/Checklists/)** - Phase-by-phase implementation checklists
+- **[Detection Rules](./NTLM%20resources/DetectionRules/)** - SIEM rules for NTLM attack detection
+- **[Group Policies](./NTLM%20resources/Policies/)** - GPO templates for NTLM hardening
 
-�� **Start here**: [Resources Overview](./resources/README.md)
+�� **Start here**: [Resources Overview](./NTLM%20resources/README.md)
 
 ## 📚 Legacy Protocols: Comprehensive Documentation
 

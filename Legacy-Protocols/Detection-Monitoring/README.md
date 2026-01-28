@@ -649,4 +649,4 @@ Get-Service Wecsvc
 
 ---
 
-**[← Back to Legacy Protocols](../README.md)** | **[Resources →](../../resources/)**
+**[← Back to Legacy Protocols](../README.md)** | **[Resources →](../../NTLM%20resources/)**

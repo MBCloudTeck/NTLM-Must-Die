@@ -152,17 +152,17 @@
         {
           "name": "Enable-NTLMAuditing.ps1",
           "description": "Enable NTLM auditing via Group Policy for tracking usage",
-          "path": "resources/PowerShell/Enable-NTLMAuditing.ps1"
+          "path": "NTLM resources/PowerShell/Enable-NTLMAuditing.ps1"
         },
         {
           "name": "Disable-NTLMv1.ps1",
           "description": "Disable NTLMv1 using Group Policy and registry settings",
-          "path": "resources/PowerShell/Disable-NTLMv1.ps1"
+          "path": "NTLM resources/PowerShell/Disable-NTLMv1.ps1"
         },
         {
           "name": "Audit-NTLMUsage.ps1",
           "description": "Comprehensive audit script to discover NTLM usage across domain",
-          "path": "resources/PowerShell/Audit-NTLMUsage.ps1"
+          "path": "NTLM resources/PowerShell/Audit-NTLMUsage.ps1"
         }
       ]
     },
@@ -304,7 +304,7 @@
           "rule_name": "NTLMv1 Authentication Detected - Critical",
           "severity": "High",
           "description": "Alerts on any NTLMv1 authentication attempt. NTLMv1 should be disabled.",
-          "file_reference": "resources/DetectionRules/sentinel-ntlmv1-detection.yaml",
+          "file_reference": "NTLM resources/DetectionRules/sentinel-ntlmv1-detection.yaml",
           "event_ids": ["4624"],
           "false_positive_rate": "Low"
         },
@@ -313,7 +313,7 @@
           "rule_name": "NTLM Relay Attack Pattern",
           "severity": "High",
           "description": "Detects potential NTLM relay attack based on multiple logons from same source to multiple targets.",
-          "file_reference": "resources/DetectionRules/sentinel-ntlm-relay-attack.yaml",
+          "file_reference": "NTLM resources/DetectionRules/sentinel-ntlm-relay-attack.yaml",
           "event_ids": ["4624", "4776"],
           "false_positive_rate": "Medium"
         },
@@ -322,7 +322,7 @@
           "rule_name": "Privileged Account NTLM Usage",
           "severity": "High",
           "description": "Alerts when privileged or administrative accounts authenticate using NTLM.",
-          "file_reference": "resources/DetectionRules/sentinel-privileged-ntlm.yaml",
+          "file_reference": "NTLM resources/DetectionRules/sentinel-privileged-ntlm.yaml",
           "event_ids": ["4624", "4776"],
           "false_positive_rate": "Low"
         },
@@ -331,7 +331,7 @@
           "rule_name": "Anomalous NTLM Volume",
           "severity": "Medium",
           "description": "Detects unusual spikes in NTLM authentication volume that may indicate brute force or scanning.",
-          "file_reference": "resources/DetectionRules/sentinel-anomalous-ntlm.yaml",
+          "file_reference": "NTLM resources/DetectionRules/sentinel-anomalous-ntlm.yaml",
           "event_ids": ["4624", "4625", "4776"],
           "false_positive_rate": "Medium"
         }
@@ -345,12 +345,12 @@
     }
   ],
   "resources": {
-    "kql_queries_path": "resources/KQL/",
-    "powershell_scripts_path": "resources/PowerShell/",
-    "detection_rules_path": "resources/DetectionRules/",
-    "checklists_path": "resources/Checklists/",
-    "group_policies_path": "resources/Policies/",
-    "azure_arc_guides_path": "resources/AzureArc/"
+    "kql_queries_path": "NTLM resources/KQL/",
+    "powershell_scripts_path": "NTLM resources/PowerShell/",
+    "detection_rules_path": "NTLM resources/DetectionRules/",
+    "checklists_path": "NTLM resources/Checklists/",
+    "group_policies_path": "NTLM resources/Policies/",
+    "azure_arc_guides_path": "NTLM resources/AzureArc/"
   },
   "supported_microsoft_products": [
     "Microsoft Sentinel",
