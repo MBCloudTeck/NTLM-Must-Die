@@ -28,6 +28,20 @@ https://techcommunity.microsoft.com/blog/microsoftsentinelblog/azure-sentinel-in
 
 �� **Start here**: [Resources Overview](./resources/README.md)
 
+## 📚 Legacy Protocols: Comprehensive Documentation
+
+**Beyond NTLM: A complete guide to legacy protocol elimination.** The [`/Legacy-Protocols`](./Legacy-Protocols/) directory provides comprehensive documentation for identifying, monitoring, and eliminating all legacy protocols in your environment.
+
+- **[Legacy Protocols Overview](./Legacy-Protocols/)** - Complete guide to legacy protocol security
+  - Authentication protocols (NTLM, SMBv1, LDAP)
+  - Mail protocols (POP3, IMAP, SMTP)
+  - Network protocols (Telnet, FTP, SNMP)
+  - Cloud legacy authentication
+  - Detection and monitoring strategies
+  - Phase-by-phase remediation guides
+
+🎯 **Start here**: [Legacy Protocols README](./Legacy-Protocols/README.md)
+
 Original Author - and full credit to https://www.linkedin.com/in/david-alonso-dominguez/ - Great blog post - Supercharged with GitHub Copilot. 
 
 ---
