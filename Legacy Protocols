@@ -1,372 +1,86 @@
-Legacy Protocols are older, often insecure protocols that many organisations still use unintentionally:
-Authentication/Directory
-•	NTLMv1 / NTLMv2
-•	Kerberos RC4
-•	LDAP (unencrypted), LDAP Simple Bind
-•	SMBv1
-Mail / File / Network
-•	POP3
-•	IMAP (unencrypted)
-•	SMTP (unencrypted)
-•	FTP / SFTP / FTPS
-•	Telnet
-•	RDP legacy encryption
-•	SNMP v1/v2
-Cloud legacy
-•	Basic authentication in Microsoft 365
-•	IMAP/POP/SMTP Auth to Exchange Online
-•	Legacy OAuth flows
-•	SMB over VPN tunnels
-
-
-
-
-
-
-
-
-To monitor legacy protocols effectively:
-A. Collect logs
-From endpoints, domain controllers, network devices, and cloud services.
-B. Normalise and analyse
-SIEM (Sentinel)
-C. Alert on risky usage
-E.g., NTLM authentication or IMAP sign-ins to Exchange Online.
-D. Build phase-out and block gradually
-Monitoring first → user mapping → risk evaluation → controlled disablement.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-On-Premise Monitoring
-A. Active Directory / Authentication Logs
-NTLM
-Enable NTLM auditing:
-1.	Advanced Audit Policy Configuration → Logon/Logoff → NTLM Authentication
-2.	Enable event IDs:
-•	8001–8004 (NTLM auth events)
-•	4624 / 4625 (Logon events - show NTLM use)
-Feed into:
-•	Microsoft Sentinel
-LDAP / Simple Bind
-Enable LDAP diagnostic logging:
-HKLM\SYSTEM\CurrentControlSet\Services\NTDS\Diagnostics\16 LDAP Interface Events = 2
-Monitor for:
-•	Event 2889 → LDAP simple bind with clear text
-
-B. Network Monitoring
-If you need protocol level inspection:
-Network IDS/IPS
-•	Zeek (excellent for protocol fingerprinting; detects SMBv1, FTP, telnet, etc.)
-•	Suricata
-•	Snort 3
-They can identify:
-•	SMBv1
-•	Telnet
-•	FTP
-•	SSLv2/v3
-•	POP3/IMAP unencrypted
-NetFlow / Traffic Analysis Tools
-•	Cisco Stealthwatch
-•	SolarWinds NetFlow Traffic Analyzer
-•	ManageEngine NetFlow Analyzer
-These detect:
-•	Port 110, 143, 23, 21 → legacy mail/Telnet/FTP traffic.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Cloud Monitoring (Microsoft 365 + Azure)
-A. Azure AD Sign-in Logs
-Monitor for:
-•	IMAP
-•	POP
-•	SMTP AUTH
-•	Exchange ActiveSync
-•	Legacy OAuth flows
-Use filters:
-•	Client App → “Other clients” = legacy auth
-•	Protocol → IMAP/POP/SMTP/ActiveSync
-Integration:
-•	Send logs to Azure Monitor
-•	Or use Sentinel Workbook: "Azure AD Legacy Authentication"
-
-B. Microsoft Defender for Cloud Apps (MDCA)
-Provides:
-•	Real-time cloud app session monitoring
-•	Protocol visibility
-•	Impossible travel + suspicious legacy auth alerts
-Useful policies:
-•	“Client App = Legacy Authentication”
-•	“Risky session detected”
-
-C. Exchange Online PowerShell
-Check if users are still using legacy protocols:
-IMAP/POP:
-PowerShell
-Get-EXOMailbox -ResultSize Unlimited | Get-CASMailbox | 
-Select DisplayName, ImapEnabled, PopEnabled, ActiveSyncEnabled
-Show more lines
-SMTP Auth:
-Plain Text
-Get-TransportConfig | Select SmtpClientAuthenticationDisabled
-
-D. Sentinel Analytics Rules for Legacy Protocols
-Examples to enable:
-•	“Legacy authentication sign-ins”
-•	“Impossible travel with legacy auth”
-•	“Multiple failed legacy protocol logins”
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Recommended Architecture
-1. Data Collection
-Layer	Source	Log Type
-Identity	AD DCs	NTLM/LDAP/Simple Bind
-Servers	Windows/Linux	RDP, SMB, FTP, Telnet
-Network	Firewall/IDS	Protocol discovery
-Cloud	Azure AD	Legacy client apps
-M365	EXO/SharePoint	Basic auth usage
-
-2. Normalisation
-Push all logs to a central SIEM.
-
-3. Analytics & Alerts
-Create alert rules for:
-•	NTLM use
-•	SMBv1 detected
-•	IMAP/POP/SMTP Auth sign-in
-•	LDAP Simple Bind
-•	Telnet/FTP connections
-4. Reporting Dashboards
-Build monthly dashboards:
-•	Users/devices using legacy auth
-•	Top legacy protocol types
-•	Geo-location of legacy connections
-•	Trends over time
-
-
-Phased Retirement Approach
-Phase 1 – Discovery
-Monitor only; identify systems at risk.
-Phase 2 – Notify & Educate
-Tell teams their systems are using legacy protocols.
-Phase 3 – Enforce
-Pilot groups → block legacy auth in Azure AD Conditional Access.
-Phase 4 – Decommission
-Disable on-prem services like SMBv1, Telnet, FTP after migration.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Automation scripts:
-
-KQL queries (drop straight into Log Analytics / Sentinel)
-Tables referenced:
-•	SigninLogs (Azure AD sign-ins; includes Client/App/auth details) [learn.microsoft.com], [learn.microsoft.com], [learn.microsoft.com]
-•	SecurityEvent (Windows Security log mapped schema) [learn.microsoft.com]
-•	WindowsEvent (AMA agent; raw event data including channel & named fields)
-Azure AD – Legacy authentication usage (IMAP/POP/SMTP/ActiveSync & other basic auth)
-Use the “Sign-ins using legacy authentication” workbook for a guided view (it relies on the Client App → Other clients filter). 
-Column names for SigninLogs (e.g., AppDisplayName, AuthenticationProtocol)
-
-// Summary of legacy/basicauth client sign-ins across EXO
-SigninLogs
-| where TimeGenerated > ago(30d)
-| where AppDisplayName has "Exchange" or ResourceDisplayName has "Exchange"
-// Legacy clients typically surface under "Other clients"; also filter on mail protocols via UserAgent hint
-| where ClientApp == "Other clients" or UserAgent has_any ("IMAP","POP","SMTP","ActiveSync")
-| summarize SignIns=count() by ClientApp, AppDisplayName, UserPrincipalName
-| order by SignIns desc
-
-
-Windows – NTLM authentication (success & failure) 
-
-// Domain-wide NTLM activity (SecurityEvent mapping)
-SecurityEvent
-| where TimeGenerated > ago(14d)
-| where EventID in (4624, 4625)                // Logon success / failure
-| where AuthenticationPackageName has "NTLM"   // NTLM package used
-| project TimeGenerated, EventID, Account, AccountDomain, Computer, LogonType, AuthenticationPackageName, IpAddress
-| order by TimeGenerated desc
- 
-
-
-
-
-
-
-Detect NTLMv1 specifically (parse Windows event data) – Microsoft’s NTLMv1 auditing guidance shows “Package Name (NTLM only): NTLM V1” inside 4624 events; with AMA these fields are accessible via WindowsEvent.EventData
-
-// Parse raw Windows Security events to find NTLM V1
-WindowsEvent
-| where Provider == "Microsoft-Windows-Security-Auditing" and EventID == 4624
-| extend LmPackageName = tostring(EventData["LmPackageName"])
-| where isnotempty(LmPackageName) and LmPackageName == "NTLM V1"
-| project TimeGenerated, Computer, tostring(EventData["TargetUserName"]) as TargetUser, IpAddress=tostring(EventData["IpAddress"]), LmPackageName
-| order by TimeGenerated desc
-
-
-
-Windows – LDAP simple binds (cleartext/unsigned)
-Directory Service / Event 2889 is produced when LDAP diagnostic level 16 is set to 2, and flags insecure binds
-// LDAP simple bind over cleartext or unsigned SASL – Event 2889
-WindowsEvent
-| where Channel == "Directory Service" and EventID == 2889
-| extend ClientIP = tostring(EventData["Client IP Address"]),
-         Identity  = tostring(EventData["Account Name"]),
-         Binding   = tostring(EventData["Binding Type"])
-| summarize Count=count() by Binding, ClientIP, Identity
-| order by Count desc
-
-Windows – NTLM operational channel (extra enrichment)
-NTLM Operational logs 8001–8004 provide enriched context when auditing is enabled.
-// NTLM Operational channel (if collected via AMA)
-// Ingest NTLM Operational channel via a DCR, then query:
-WindowsEvent
-| where Channel == "Microsoft-Windows-NTLM/Operational" and EventID in (8001,8002,8003,8004)
-| project TimeGenerated, EventID, Computer, Workstation=tostring(EventData["Workstation"]), User=tostring(EventData["UserName"]), Domain=tostring(EventData["DomainName"]), SecureChannel=tostring(EventData["SecureChannelName"])
-
-Microsoft Sentinel Workbook (JSON)
-•	This workbook gives tabs and visuals for: AAD legacy auth, NTLM activity, NTLMv1 occurrences, and LDAP simple binds.
-•	You can import it via Sentinel → Workbooks → Add → Edit → Advanced Editor → Gallery Template → Paste JSON → Apply. [learn.microsoft.com]
-•	The JSON structure follows the Application Insights/Microsoft.Insights Workbooks schema, and mirrors Microsoft’s public “Insecure Protocols” example workbooks. [github.com], [github.com], [techcommun...rosoft.com]
-Note: If you already use Microsoft’s official Insecure Protocols workbook, you can deploy that directly from GitHub; below is a compact variant tailored to your four key detection
-
-{
-  "version": "Notebook/1.0",
-  "items": [
-    { "type": 1, "content": { "json": "# Legacy Protocol Monitoring\nThis workbook summarizes legacy protocol usage across on prem and Microsoft 365." }, "name": "header" },
-
-    { "type": 9, "content": {
-        "version": "KqlParameterItem/1.0",
-        "parameters": [
-          { "id": "timerange", "name": "TimeRange", "type": 4, "isRequired": true, "value": { "durationMs": 1209600000 } },
-          { "id": "workspace", "name": "Workspace", "type": 5,
-            "query": "resources | where type == 'microsoft.operationalinsights/workspaces' | project id, name | order by tolower(name) asc",
-            "queryType": 1, "resourceType": "microsoft.resourcegraph/resources" }
-        ],
-        "style": "above"
-      }, "name": "parameters" },
-
-    { "type": 11, "content": {
-        "version": "LinkItem/1.0", "style": "tabs",
-        "links": [
-          { "id": "tab1", "cellValue": "Tab", "linkTarget": "parameter", "linkLabel": "Azure AD Legacy Auth", "subTarget": "0" },
-          { "id": "tab2", "cellValue": "Tab", "linkTarget": "parameter", "linkLabel": "NTLM Activity", "subTarget": "1" },
-          { "id": "tab3", "cellValue": "Tab", "linkTarget": "parameter", "linkLabel": "NTLMv1", "subTarget": "2" },
-          { "id": "tab4", "cellValue": "Tab", "linkTarget": "parameter", "linkLabel": "LDAP Simple Bind", "subTarget": "3" }
-        ]
-      }, "name": "tabs" },
-
-    { "type": 12, "content": {
-        "version": "NotebookGroup/1.0", "groupType": "editable",
-        "items": [
-          { "type": 3, "content": {
-              "version": "KqlItem/1.0", "queryType": 0, "resourceType": "microsoft.operationalinsights/workspaces",
-              "query": "SigninLogs | where TimeGenerated between (ago({TimeRange:durationMs}) .. now()) | where AppDisplayName has \"Exchange\" or ResourceDisplayName has \"Exchange\" | where ClientApp == \"Other clients\" or UserAgent has_any (\"IMAP\",\"POP\",\"SMTP\",\"ActiveSync\") | summarize SignIns=count() by ClientApp, AppDisplayName, UserPrincipalName | order by SignIns desc",
-              "title": "Sign-ins using legacy authentication (Azure AD)"
-            }, "name": "aad-legacy-grid",
-            "styleSettings": { "showBorder": true } }
-        ]
-      }, "name": "tab-aad-legacy", "conditionalVisibility": { "parameterName": "Tab", "comparison": "isEqualTo", "value": "0" } },
-
-    { "type": 12, "content": {
-        "version": "NotebookGroup/1.0", "groupType": "editable",
-        "items": [
-          { "type": 3, "content": {
-              "version": "KqlItem/1.0", "queryType": 0, "resourceType": "microsoft.operationalinsights/workspaces",
-              "query": "SecurityEvent | where TimeGenerated between (ago({TimeRange:durationMs}) .. now()) | where EventID in (4624,4625) | where AuthenticationPackageName has \"NTLM\" | summarize Logons=count() by Computer, Account, EventID | order by Logons desc",
-              "title": "NTLM logons (SecurityEvent)"
-            }, "name": "ntlm-grid" }
-        ]
-      }, "name": "tab-ntlm", "conditionalVisibility": { "parameterName": "Tab", "comparison": "isEqualTo", "value": "1" } },
-
-    { "type": 12, "content": {
-        "version": "NotebookGroup/1.0", "groupType": "editable",
-        "items": [
-          { "type": 3, "content": {
-              "version": "KqlItem/1.0", "queryType": 0, "resourceType": "microsoft.operationalinsights/workspaces",
-              "query": "WindowsEvent | where TimeGenerated between (ago({TimeRange:durationMs}) .. now()) | where Provider == \"Microsoft-Windows-Security-Auditing\" and EventID == 4624 | extend LmPackageName=tostring(EventData[\"LmPackageName\"]) | where LmPackageName == \"NTLM V1\" | summarize Count=count() by Computer, tostring(EventData[\"TargetUserName\"])",
-              "title": "NTLM V1 detections (WindowsEvent)"
-            }, "name": "ntlmv1-grid" }
-        ]
-      }, "name": "tab-ntlmv1", "conditionalVisibility": { "parameterName": "Tab", "comparison": "isEqualTo", "value": "2" } },
-
-    { "type": 12, "content": {
-        "version": "NotebookGroup/1.0", "groupType": "editable",
-        "items": [
-          { "type": 3, "content": {
-              "version": "KqlItem/1.0", "queryType": 0, "resourceType": "microsoft.operationalinsights/workspaces",
-              "query": "WindowsEvent | where TimeGenerated between (ago({TimeRange:durationMs}) .. now()) | where Channel == \"Directory Service\" and EventID == 2889 | extend ClientIP=tostring(EventData[\"Client IP Address\"]) , Identity=tostring(EventData[\"Account Name\"]) , Binding=tostring(EventData[\"Binding Type\"]) | summarize Count=count() by Binding, ClientIP, Identity",
-              "title": "LDAP simple bind detections (WindowsEvent)"
-            }, "name": "ldap-grid" }
-        ]
-      }, "name": "tab-ldap", "conditionalVisibility": { "parameterName": "Tab", "comparison": "isEqualTo", "value": "3" } }
-  ]
-}
-``
-
-
-
+# Legacy Protocols Documentation Has Moved!
+
+## 📚 New Location: `/Legacy-Protocols/` Directory
+
+The Legacy Protocols content has been significantly expanded and reorganized into a comprehensive documentation structure.
+
+### 🎯 [Start Here: Legacy Protocols Main Guide →](./Legacy-Protocols/README.md)
+
+## What's New?
+
+The new Legacy Protocols section includes:
+
+### 📖 Comprehensive Protocol Guides
+- **[NTLM & NTLMv2](./Legacy-Protocols/Authentication/NTLM.md)** - 16KB deep dive
+- **[SMBv1](./Legacy-Protocols/Authentication/SMBv1.md)** - 17KB including WannaCry/NotPetya
+- **[Telnet](./Legacy-Protocols/Network-Protocols/Telnet.md)** - 12KB migration to SSH
+- **[Cloud Legacy Auth](./Legacy-Protocols/Cloud-Legacy/)** - 15KB Azure AD & M365
+
+### 🔍 Detection & Monitoring
+- **[Complete Monitoring Guide](./Legacy-Protocols/Detection-Monitoring/)** - 21KB
+  - Multi-layer detection strategy
+  - On-premises monitoring (AD, LDAP, SMB)
+  - Cloud detection (Azure AD, M365)
+  - Microsoft Sentinel integration
+  - KQL queries and PowerShell scripts
+
+### 🛠️ Remediation Framework
+- **[Phase-by-Phase Guide](./Legacy-Protocols/Remediation/)** - 29KB
+  - Discovery & Assessment
+  - Planning & Communication
+  - Pilot Implementation
+  - Production Rollout
+  - Monitoring & Enforcement
+
+### ⚡ Quick Reference
+- **[Quick Reference Guide](./Legacy-Protocols/QUICK-REFERENCE.md)** - 7KB
+  - Critical actions (first 24 hours)
+  - Risk matrices
+  - One-liner detection commands
+  - Copy-paste fixes
+  - Emergency rollback procedures
+
+### 📋 Original Content Preserved
+- **[Original Implementation](./Legacy-Protocols/Remediation/Original-Implementation.md)** - 13KB
+  - All original KQL queries
+  - Sentinel workbook JSON
+  - Original monitoring guidance
+
+## Quick Navigation
+
+| Need | Go To |
+|------|-------|
+| **Overview of all legacy protocols** | [Main README](./Legacy-Protocols/README.md) |
+| **Fast lookup & commands** | [Quick Reference](./Legacy-Protocols/QUICK-REFERENCE.md) |
+| **NTLM details** | [NTLM Guide](./Legacy-Protocols/Authentication/NTLM.md) |
+| **SMBv1 remediation** | [SMBv1 Guide](./Legacy-Protocols/Authentication/SMBv1.md) |
+| **Detection & monitoring** | [Monitoring Guide](./Legacy-Protocols/Detection-Monitoring/) |
+| **Phase-by-phase plan** | [Remediation Guide](./Legacy-Protocols/Remediation/) |
+| **Cloud legacy auth** | [Cloud Guide](./Legacy-Protocols/Cloud-Legacy/) |
+| **Original KQL & workbook** | [Original Content](./Legacy-Protocols/Remediation/Original-Implementation.md) |
+
+## Total Documentation
+
+- **9 comprehensive guides**
+- **~120KB of content**
+- **4,600+ lines of documentation**
+- **Real-world examples**
+- **Copy-paste ready commands**
+- **KQL queries for Sentinel**
+- **PowerShell automation**
+- **Risk matrices & prioritization**
+
+## Benefits of New Structure
+
+✅ **Better Organization** - Content grouped by protocol type and task  
+✅ **Comprehensive Coverage** - Detailed guides for each major protocol  
+✅ **Practical Examples** - Real-world scenarios and commands  
+✅ **Easy Navigation** - Clear structure and quick reference  
+✅ **Integrated Resources** - Links to `/resources` directory tools  
+✅ **Progressive Detail** - Quick start → Deep dive as needed  
+
+---
+
+**[→ Start with Legacy Protocols Main Guide](./Legacy-Protocols/README.md)**
+
+*This file maintained for backward compatibility. All new content in `/Legacy-Protocols/` directory.*
